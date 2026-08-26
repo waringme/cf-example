@@ -38,6 +38,8 @@ export interface CtaResult {
   fragment: CtaFragment;
   ctaHref: string;
   imageUrl: string | null;
+  /** True when imageUrl was inherited from master because the variation had none. */
+  imageFromMaster: boolean;
   mock: boolean;
   /** The exact request that was issued, for the "how it works" panel. */
   debug: {
@@ -209,6 +211,7 @@ export async function fetchCta(source: CtaSource): Promise<CtaResult> {
       fragment,
       ctaHref: resolveCtaHref(fragment, publishOrigin),
       imageUrl: fragment.bannerimage?._publishUrl ?? null,
+      imageFromMaster: false,
       mock: true,
       debug,
     };
@@ -234,10 +237,38 @@ export async function fetchCta(source: CtaSource): Promise<CtaResult> {
     );
   }
 
+  let imageUrl = fragment.bannerimage?._publishUrl ?? null;
+  let imageFromMaster = false;
+
+  // A variation often overrides only text and leaves the banner image unset in
+  // the GraphQL projection (bannerimage: null). Fall back to master's image so
+  // the promo still shows one — mirroring how CF variations inherit from master.
+  if (!imageUrl && variation !== 'master') {
+    try {
+      const masterRes = await fetch(wrapperServiceUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ graphQLPath, cfPath, variation: `master?cq=${Date.now()}` }),
+        cache: 'no-store',
+      });
+      if (masterRes.ok) {
+        const masterItem: CtaFragment | undefined = (await masterRes.json())?.data?.ctaByPath?.item;
+        const masterImage = masterItem?.bannerimage?._publishUrl;
+        if (masterImage) {
+          imageUrl = masterImage;
+          imageFromMaster = true;
+        }
+      }
+    } catch {
+      // Non-fatal — just render the promo without an image.
+    }
+  }
+
   return {
     fragment,
     ctaHref: resolveCtaHref(fragment, publishOrigin),
-    imageUrl: fragment.bannerimage?._publishUrl ?? null,
+    imageUrl,
+    imageFromMaster,
     mock: false,
     debug,
   };
