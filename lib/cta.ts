@@ -95,7 +95,8 @@ export interface VariationOption {
 export async function fetchVariations(cfPath: string): Promise<VariationOption[]> {
   const origin = envOr(process.env.AEM_PUBLISH_ORIGIN, DEFAULTS.aemPublishOrigin).replace(/\/$/, '');
   const directEndpoint = envOr(process.env.AEM_GRAPHQL_DIRECT_ENDPOINT, DEFAULTS.directEndpoint);
-  const url = `${origin}${directEndpoint}`;
+  // Cache-buster so the variation list also reflects the latest published state.
+  const url = `${origin}${directEndpoint}?cq=${Date.now()}`;
 
   const runQuery = async (query: string) => {
     const response = await fetch(url, {
@@ -186,12 +187,17 @@ export async function fetchCta(source: CtaSource): Promise<CtaResult> {
 
   const publishOrigin = aemPublishOrigin.replace(/\/$/, '');
   const graphQLPath = `${publishOrigin}${graphqlQuery}`;
+  // Cache-buster: a unique `cq` timestamp query param forces AEM/CDN to serve
+  // the latest published version of the fragment. The wrapper appends the
+  // variation last, so a trailing `?cq=...` on the variation lands at the very
+  // end of the resolved URL as a valid query string.
+  const cacheBuster = `cq=${Date.now()}`;
   const requestBody = {
     graphQLPath,
     cfPath,
-    variation: `${variation};ts=${Date.now()}`,
+    variation: `${variation}?${cacheBuster}`,
   };
-  const resolvedGraphqlUrl = `${graphQLPath};path=${cfPath};variation=${variation}`;
+  const resolvedGraphqlUrl = `${graphQLPath};path=${cfPath};variation=${variation}?${cacheBuster}`;
 
   const debug = { wrapperServiceUrl, requestBody, resolvedGraphqlUrl };
 
