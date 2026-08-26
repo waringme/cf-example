@@ -103,6 +103,7 @@ export default function MobileApp() {
           <select
             id="variation"
             value={offerId}
+            autoComplete="off"
             onChange={(e) => setOfferId(e.target.value)}
           >
             {OFFERS.map((o) => (
