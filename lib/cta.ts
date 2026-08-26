@@ -76,38 +76,73 @@ export function getDefaultSource(): CtaSource {
   };
 }
 
+export interface VariationOption {
+  /** AEM variation name, e.g. "master" or "genai_retire_confidence". */
+  name: string;
+  /** The content fragment's title for that variation, used as the dropdown label. */
+  title: string;
+}
+
 /**
- * List the variations authored on a content fragment.
+ * List the variations authored on a content fragment, each with its title.
  *
  * The persisted `CTAByPath` query doesn't project `_variations`, so this hits
- * the AEM publish *direct* GraphQL endpoint (server-side, no CORS) and asks for
- * the `_variations` field. Returns `['master', ...authoredVariations]` so the
- * caller can build a dropdown that always reflects what's currently in AEM.
+ * the AEM publish *direct* GraphQL endpoint (server-side, no CORS). One query
+ * gets the variation names + master's title; a second aliased query fetches the
+ * title for each remaining variation. Returns options ordered master-first so
+ * the caller can build a dropdown labelled by fragment title.
  */
-export async function fetchVariations(cfPath: string): Promise<string[]> {
+export async function fetchVariations(cfPath: string): Promise<VariationOption[]> {
   const origin = envOr(process.env.AEM_PUBLISH_ORIGIN, DEFAULTS.aemPublishOrigin).replace(/\/$/, '');
-  const directEndpoint = envOr(
-    process.env.AEM_GRAPHQL_DIRECT_ENDPOINT,
-    DEFAULTS.directEndpoint,
+  const directEndpoint = envOr(process.env.AEM_GRAPHQL_DIRECT_ENDPOINT, DEFAULTS.directEndpoint);
+  const url = `${origin}${directEndpoint}`;
+
+  const runQuery = async (query: string) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      throw new Error(`Variation lookup returned ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  };
+
+  // Step 1: master's title + the list of authored variation names.
+  const base = await runQuery(
+    `{ ctaByPath(_path: ${JSON.stringify(cfPath)}) { item { _variations title } } }`,
   );
+  const baseItem = base?.data?.ctaByPath?.item;
+  const names: string[] = baseItem?._variations ?? [];
+  const options: VariationOption[] = [
+    { name: 'master', title: baseItem?.title || 'Master' },
+  ];
 
-  const query = `{ ctaByPath(_path: ${JSON.stringify(cfPath)}) { item { _variations } } }`;
-
-  const response = await fetch(`${origin}${directEndpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Variation lookup returned ${response.status} ${response.statusText}`);
+  // Step 2: fetch each variation's title in a single aliased query.
+  if (names.length) {
+    const aliases = names
+      .map(
+        (n, i) =>
+          `v${i}: ctaByPath(_path: ${JSON.stringify(cfPath)}, variation: ${JSON.stringify(
+            n,
+          )}) { item { title } }`,
+      )
+      .join('\n');
+    const titles = await runQuery(`{ ${aliases} }`);
+    names.forEach((name, i) => {
+      const title = titles?.data?.[`v${i}`]?.item?.title;
+      options.push({ name, title: title || prettify(name) });
+    });
   }
 
-  const payload = await response.json();
-  const variations: string[] = payload?.data?.ctaByPath?.item?._variations ?? [];
-  // `master` is always present but isn't listed in `_variations`.
-  return ['master', ...variations];
+  return options;
+}
+
+/** Turn a variation name into a readable label when no title is available. */
+function prettify(variation: string): string {
+  return variation.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Resolve the CTA click-through URL from the fragment's `ctaurl` field. */

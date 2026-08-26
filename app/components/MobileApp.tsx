@@ -1,20 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { CtaResult } from '@/lib/cta';
+import type { CtaResult, VariationOption } from '@/lib/cta';
 
 // The promo is driven by ONE content fragment; the dropdown lists its
 // variations, fetched live from AEM on every page load (so any variation you
-// author in AEM appears automatically — no code change needed).
+// author in AEM appears automatically — no code change needed). Each option is
+// labelled with the content fragment's title for that variation.
 const CF_PATH = '/content/dam/mandg/en/fragments/promotions/fragment-one';
-
-// Turn an AEM variation name into a readable label, e.g.
-// "genai_retire_confidence" -> "Genai Retire Confidence", "master" -> "Master".
-function prettify(variation: string): string {
-  return variation
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function PromoFragment({ result }: { result: CtaResult }) {
   const { fragment, ctaHref, imageUrl } = result;
@@ -43,7 +36,9 @@ function PromoFragment({ result }: { result: CtaResult }) {
 }
 
 export default function MobileApp() {
-  const [variations, setVariations] = useState<string[]>(['master']);
+  const [variations, setVariations] = useState<VariationOption[]>([
+    { name: 'master', title: 'Master' },
+  ]);
   const [variation, setVariation] = useState<string>('master');
   const [result, setResult] = useState<CtaResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,12 +77,16 @@ export default function MobileApp() {
         });
         const data = await res.json();
         if (cancelled) return;
-        const list: string[] =
-          Array.isArray(data?.variations) && data.variations.length ? data.variations : ['master'];
+        const list: VariationOption[] =
+          Array.isArray(data?.variations) && data.variations.length
+            ? data.variations
+            : [{ name: 'master', title: 'Master' }];
         setVariations(list);
-        setVariation((current) => (list.includes(current) ? current : list[0]));
+        setVariation((current) =>
+          list.some((o) => o.name === current) ? current : list[0].name,
+        );
       } catch {
-        if (!cancelled) setVariations(['master']);
+        if (!cancelled) setVariations([{ name: 'master', title: 'Master' }]);
       }
     })();
     return () => {
@@ -127,8 +126,8 @@ export default function MobileApp() {
             onChange={(e) => setVariation(e.target.value)}
           >
             {variations.map((v) => (
-              <option key={v} value={v}>
-                {prettify(v)}
+              <option key={v.name} value={v.name}>
+                {v.title}
               </option>
             ))}
           </select>
