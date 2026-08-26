@@ -63,6 +63,40 @@ export function getDefaultSource(): CtaSource {
   };
 }
 
+/**
+ * List the variations authored on a content fragment.
+ *
+ * The persisted `CTAByPath` query doesn't project `_variations`, so this hits
+ * the AEM publish *direct* GraphQL endpoint (server-side, no CORS) and asks for
+ * the `_variations` field. Returns `['master', ...authoredVariations]` so the
+ * caller can build a dropdown that always reflects what's currently in AEM.
+ */
+export async function fetchVariations(cfPath: string): Promise<string[]> {
+  const origin = (
+    process.env.AEM_PUBLISH_ORIGIN ?? 'https://publish-p147324-e2050468.adobeaemcloud.com'
+  ).replace(/\/$/, '');
+  const directEndpoint =
+    process.env.AEM_GRAPHQL_DIRECT_ENDPOINT ?? '/content/_cq_graphql/ref-demo-eds/endpoint.json';
+
+  const query = `{ ctaByPath(_path: ${JSON.stringify(cfPath)}) { item { _variations } } }`;
+
+  const response = await fetch(`${origin}${directEndpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Variation lookup returned ${response.status} ${response.statusText}`);
+  }
+
+  const payload = await response.json();
+  const variations: string[] = payload?.data?.ctaByPath?.item?._variations ?? [];
+  // `master` is always present but isn't listed in `_variations`.
+  return ['master', ...variations];
+}
+
 /** Resolve the CTA click-through URL from the fragment's `ctaurl` field. */
 function resolveCtaHref(fragment: CtaFragment, publishOrigin: string): string {
   const cta = fragment.ctaurl;

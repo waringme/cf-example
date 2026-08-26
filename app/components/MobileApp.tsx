@@ -3,28 +3,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CtaResult } from '@/lib/cta';
 
-// Each dropdown option maps to a real content fragment + variation on the
-// M&G AEM instance. Selecting one re-fetches the promo shown in the app.
-// (fragment-one only has a `master` variation; fragment-two is a sibling promo
-// with a different CTA — together they demonstrate switching CF content live.)
-const CF_BASE = '/content/dam/mandg/en/fragments/promotions';
+// The promo is driven by ONE content fragment; the dropdown lists its
+// variations, fetched live from AEM on every page load (so any variation you
+// author in AEM appears automatically — no code change needed).
+const CF_PATH = '/content/dam/mandg/en/fragments/promotions/fragment-one';
 
-type Offer = { id: string; label: string; cfPath: string; variation: string };
-
-const OFFERS: Offer[] = [
-  {
-    id: 'master',
-    label: 'Master — “Check Now”',
-    cfPath: `${CF_BASE}/fragment-one`,
-    variation: 'master',
-  },
-  {
-    id: 'advice',
-    label: 'Advice — “Explore Financial Advice”',
-    cfPath: `${CF_BASE}/fragment-two`,
-    variation: 'master',
-  },
-];
+// Turn an AEM variation name into a readable label, e.g.
+// "genai_retire_confidence" -> "Genai Retire Confidence", "master" -> "Master".
+function prettify(variation: string): string {
+  return variation
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 function PromoFragment({ result }: { result: CtaResult }) {
   const { fragment, ctaHref, imageUrl } = result;
@@ -53,20 +43,21 @@ function PromoFragment({ result }: { result: CtaResult }) {
 }
 
 export default function MobileApp() {
-  const [offerId, setOfferId] = useState<string>(OFFERS[0].id);
+  const [variations, setVariations] = useState<string[]>(['master']);
+  const [variation, setVariation] = useState<string>('master');
   const [result, setResult] = useState<CtaResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const loadOffer = useCallback(async (id: string) => {
-    const offer = OFFERS.find((o) => o.id === id) ?? OFFERS[0];
+  // Fetch the fragment's content for a given variation.
+  const loadVariation = useCallback(async (v: string) => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/cta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cfPath: offer.cfPath, variation: offer.variation }),
+        body: JSON.stringify({ cfPath: CF_PATH, variation: v }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
@@ -79,9 +70,35 @@ export default function MobileApp() {
     }
   }, []);
 
+  // On load: discover which variations exist in AEM, then load the first one.
   useEffect(() => {
-    loadOffer(offerId);
-  }, [offerId, loadOffer]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/variations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cfPath: CF_PATH }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        const list: string[] =
+          Array.isArray(data?.variations) && data.variations.length ? data.variations : ['master'];
+        setVariations(list);
+        setVariation((current) => (list.includes(current) ? current : list[0]));
+      } catch {
+        if (!cancelled) setVariations(['master']);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Whenever the selected variation changes, (re)load its content.
+  useEffect(() => {
+    loadVariation(variation);
+  }, [variation, loadVariation]);
 
   return (
     <div className="phone-wrap">
@@ -97,18 +114,21 @@ export default function MobileApp() {
           </div>
         </div>
 
-        {/* Variation selector */}
+        {/* Variation selector — options come live from AEM on load */}
         <div className="variation-bar">
-          <label htmlFor="variation">Promotion variation</label>
+          <label htmlFor="variation">
+            Content fragment variation
+            <span className="variation-count">{variations.length} in AEM</span>
+          </label>
           <select
             id="variation"
-            value={offerId}
+            value={variation}
             autoComplete="off"
-            onChange={(e) => setOfferId(e.target.value)}
+            onChange={(e) => setVariation(e.target.value)}
           >
-            {OFFERS.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
+            {variations.map((v) => (
+              <option key={v} value={v}>
+                {prettify(v)}
               </option>
             ))}
           </select>

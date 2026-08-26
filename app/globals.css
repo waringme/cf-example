@@ -347,7 +347,17 @@ code {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  opacity: 0.8;
+  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.variation-count {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 .variation-bar select {
   font: inherit;
