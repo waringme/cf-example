@@ -47,19 +47,32 @@ export interface CtaResult {
   };
 }
 
+// Hardcoded live defaults (M&G reference demo). Used whenever the matching env
+// var is missing OR blank — a blank value (e.g. an empty Vercel env var) must
+// NOT silently drop the app into mock mode.
+const DEFAULTS = {
+  aemPublishOrigin: 'https://publish-p147324-e2050468.adobeaemcloud.com',
+  graphqlQuery: '/graphql/execute.json/ref-demo-eds/CTAByPath',
+  wrapperServiceUrl:
+    'https://3635370-refdemoapigateway-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/fetch-cf',
+  directEndpoint: '/content/_cq_graphql/ref-demo-eds/endpoint.json',
+  cfPath: '/content/dam/mandg/en/fragments/promotions/fragment-one',
+  variation: 'master',
+} as const;
+
+/** Return the env var only if it's a non-blank string, else the fallback. */
+function envOr(value: string | undefined, fallback: string): string {
+  return value && value.trim() ? value.trim() : fallback;
+}
+
 /** Defaults, overridable per-request from the UI or via env vars. */
 export function getDefaultSource(): CtaSource {
   return {
-    aemPublishOrigin:
-      process.env.AEM_PUBLISH_ORIGIN ?? 'https://publish-p147324-e2050468.adobeaemcloud.com',
-    graphqlQuery:
-      process.env.AEM_GRAPHQL_QUERY ?? '/graphql/execute.json/ref-demo-eds/CTAByPath',
-    wrapperServiceUrl:
-      process.env.CF_WRAPPER_SERVICE_URL ??
-      'https://3635370-refdemoapigateway-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/fetch-cf',
-    cfPath:
-      process.env.DEFAULT_CF_PATH ?? '/content/dam/mandg/en/fragments/promotions/fragment-one',
-    variation: process.env.DEFAULT_CF_VARIATION ?? 'master',
+    aemPublishOrigin: envOr(process.env.AEM_PUBLISH_ORIGIN, DEFAULTS.aemPublishOrigin),
+    graphqlQuery: envOr(process.env.AEM_GRAPHQL_QUERY, DEFAULTS.graphqlQuery),
+    wrapperServiceUrl: envOr(process.env.CF_WRAPPER_SERVICE_URL, DEFAULTS.wrapperServiceUrl),
+    cfPath: envOr(process.env.DEFAULT_CF_PATH, DEFAULTS.cfPath),
+    variation: envOr(process.env.DEFAULT_CF_VARIATION, DEFAULTS.variation),
   };
 }
 
@@ -72,11 +85,11 @@ export function getDefaultSource(): CtaSource {
  * caller can build a dropdown that always reflects what's currently in AEM.
  */
 export async function fetchVariations(cfPath: string): Promise<string[]> {
-  const origin = (
-    process.env.AEM_PUBLISH_ORIGIN ?? 'https://publish-p147324-e2050468.adobeaemcloud.com'
-  ).replace(/\/$/, '');
-  const directEndpoint =
-    process.env.AEM_GRAPHQL_DIRECT_ENDPOINT ?? '/content/_cq_graphql/ref-demo-eds/endpoint.json';
+  const origin = envOr(process.env.AEM_PUBLISH_ORIGIN, DEFAULTS.aemPublishOrigin).replace(/\/$/, '');
+  const directEndpoint = envOr(
+    process.env.AEM_GRAPHQL_DIRECT_ENDPOINT,
+    DEFAULTS.directEndpoint,
+  );
 
   const query = `{ ctaByPath(_path: ${JSON.stringify(cfPath)}) { item { _variations } } }`;
 
