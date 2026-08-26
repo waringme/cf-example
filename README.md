@@ -32,6 +32,18 @@ The page lets you point at any AEM publish origin + content fragment path, fetch
 it, and see both the **rendered CTA banner** and the **exact request** that was
 made.
 
+## Two pages
+
+| Route     | What it is                                                                  |
+| --------- | --------------------------------------------------------------------------- |
+| `/`       | Developer test page — enter any origin / path / variation and inspect the request. |
+| `/advice` | A pretend **M&G Wealth** financial-advice mobile app (purple brand). The feed contains a sponsored promo pulled live from a CTA content fragment — text with the image below, sized for a phone. A **dropdown at the top switches variation** between the real M&G promotion fragments. |
+
+Defaults point at the M&G AEM instance
+(`https://publish-p147324-e2050468.adobeaemcloud.com`,
+`/content/dam/mandg/en/fragments/promotions/fragment-one`), so both pages fetch
+live content out of the box.
+
 ## Running locally
 
 ```bash
