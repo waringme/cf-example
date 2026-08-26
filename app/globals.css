@@ -85,7 +85,8 @@ code {
   color: var(--muted);
 }
 
-.controls input {
+.controls input,
+.controls select {
   font: inherit;
   font-size: 14px;
   padding: 9px 11px;
@@ -94,7 +95,13 @@ code {
   background: #fdfdfd;
 }
 
-.controls input:focus {
+.controls select {
+  cursor: pointer;
+  appearance: none;
+}
+
+.controls input:focus,
+.controls select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
   border-color: transparent;

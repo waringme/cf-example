@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import type { CtaResult, CtaSource } from '@/lib/cta';
+import { useEffect, useState } from 'react';
+import type { CtaResult, CtaSource, VariationOption } from '@/lib/cta';
 import CtaBanner from './CtaBanner';
 
 // Client component: lets you point at any AEM publish origin + content
@@ -9,6 +9,10 @@ import CtaBanner from './CtaBanner';
 // CTA plus the exact request that was made.
 export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
   const [source, setSource] = useState<CtaSource>(defaults);
+  const [variations, setVariations] = useState<VariationOption[]>([
+    { name: defaults.variation, title: defaults.variation },
+  ]);
+  const [variationsLoading, setVariationsLoading] = useState(false);
   const [result, setResult] = useState<CtaResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,6 +20,46 @@ export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
   function update<K extends keyof CtaSource>(key: K, value: CtaSource[K]) {
     setSource((prev) => ({ ...prev, [key]: value }));
   }
+
+  // Load the fragment's variations whenever the content fragment path changes
+  // (debounced, since it's a free-text field). The dropdown always reflects
+  // what's currently authored in AEM for that path.
+  useEffect(() => {
+    const cfPath = source.cfPath.trim();
+    if (!cfPath) return;
+    let cancelled = false;
+    setVariationsLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/variations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cfPath }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        const list: VariationOption[] =
+          Array.isArray(data?.variations) && data.variations.length
+            ? data.variations
+            : [{ name: 'master', title: 'Master' }];
+        setVariations(list);
+        // Keep the current selection if still valid, else fall back to the first.
+        setSource((prev) =>
+          list.some((o) => o.name === prev.variation)
+            ? prev
+            : { ...prev, variation: list[0].name },
+        );
+      } catch {
+        if (!cancelled) setVariations([{ name: 'master', title: 'Master' }]);
+      } finally {
+        if (!cancelled) setVariationsLoading(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [source.cfPath]);
 
   async function load(e: React.FormEvent) {
     e.preventDefault();
@@ -60,12 +104,25 @@ export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
         </label>
         <div className="row">
           <label>
-            <span>Variation</span>
-            <input
-              type="text"
+            <span>
+              Variation{' '}
+              <em>{variationsLoading ? '(loading…)' : `(${variations.length} in AEM)`}</em>
+            </span>
+            <select
               value={source.variation}
+              autoComplete="off"
               onChange={(e) => update('variation', e.target.value)}
-            />
+            >
+              {/* If the selected variation isn't in the fetched list, still show it. */}
+              {!variations.some((o) => o.name === source.variation) && (
+                <option value={source.variation}>{source.variation}</option>
+              )}
+              {variations.map((o) => (
+                <option key={o.name} value={o.name}>
+                  {o.name === o.title ? o.name : `${o.name} — ${o.title}`}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             <span>GraphQL persisted query</span>
