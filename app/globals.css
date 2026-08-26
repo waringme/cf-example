@@ -1,0 +1,249 @@
+:root {
+  --accent: #e4002b; /* ACCA red */
+  --ink: #1f1f1f;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --bg: #f7f7f8;
+  --radius: 12px;
+  --heading: 'Helvetica Neue', Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.masthead .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
+.masthead h1 {
+  font-family: var(--heading);
+  font-size: 34px;
+  line-height: 1.15;
+  margin: 0 0 16px;
+}
+
+.masthead .lede {
+  color: #374151;
+  font-size: 17px;
+  max-width: 70ch;
+}
+
+code {
+  background: #eef0f3;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+
+/* ---- Controls form ---- */
+.consumer { margin-top: 32px; }
+
+.controls {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.controls .row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 14px;
+}
+
+.controls label {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.controls label em {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.controls input {
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fdfdfd;
+}
+
+.controls input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.controls button {
+  justify-self: start;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 11px 22px;
+  cursor: pointer;
+}
+
+.controls button:disabled { opacity: 0.6; cursor: default; }
+
+.error {
+  margin-top: 16px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.notice {
+  margin-top: 16px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+/* ---- Rendered CTA banner (mirrors the EDS content-fragment block) ---- */
+.preview { margin-top: 32px; }
+.preview h2,
+.under-the-hood h2 {
+  font-family: var(--heading);
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.cta-banner {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.cta-detail {
+  min-height: 380px;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #fff;
+}
+
+.cta-subtitle {
+  font-size: 20px;
+  line-height: 30px;
+  margin: 0;
+  font-family: var(--heading);
+}
+
+.cta-title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.3;
+  font-family: var(--heading);
+  font-weight: 800;
+}
+
+.cta-title::after {
+  content: '';
+  display: block;
+  height: 5px;
+  width: 128px;
+  margin: 12px auto;
+  background-color: var(--accent);
+}
+
+.cta-description {
+  margin: 16px 0;
+  font-size: 16px;
+  line-height: 24px;
+  max-width: 60%;
+}
+
+.cta-button {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 12px 24px;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.cta-button:hover { filter: brightness(1.08); }
+
+/* ---- Under the hood ---- */
+.under-the-hood {
+  margin-top: 40px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+
+.under-the-hood p { color: #374151; font-size: 15px; }
+
+.under-the-hood pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.under-the-hood .resolved code {
+  display: inline-block;
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+.under-the-hood details { margin-top: 8px; }
+.under-the-hood summary { cursor: pointer; font-weight: 600; }
+
+.site-footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .controls .row { grid-template-columns: 1fr; }
+  .cta-detail { padding: 36px 24px; }
+  .cta-description { max-width: 100%; }
+}
