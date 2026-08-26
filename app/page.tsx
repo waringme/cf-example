@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import CtaConsumer from './components/CtaConsumer';
 import { getDefaultSource } from '@/lib/cta';
 
@@ -14,6 +15,9 @@ export default function Home() {
           <code> content-fragment</code> (col-promo) block. It demonstrates that a content fragment
           authored once in AEM can be reused by any third-party web app.
         </p>
+        <Link className="cta-link" href="/advice">
+          → See it inside a mobile financial-advice app
+        </Link>
       </header>
 
       <CtaConsumer defaults={defaults} />

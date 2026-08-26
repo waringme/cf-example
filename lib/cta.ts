@@ -50,13 +50,15 @@ export interface CtaResult {
 /** Defaults, overridable per-request from the UI or via env vars. */
 export function getDefaultSource(): CtaSource {
   return {
-    aemPublishOrigin: process.env.AEM_PUBLISH_ORIGIN ?? '',
+    aemPublishOrigin:
+      process.env.AEM_PUBLISH_ORIGIN ?? 'https://publish-p147324-e2050468.adobeaemcloud.com',
     graphqlQuery:
       process.env.AEM_GRAPHQL_QUERY ?? '/graphql/execute.json/ref-demo-eds/CTAByPath',
     wrapperServiceUrl:
       process.env.CF_WRAPPER_SERVICE_URL ??
       'https://3635370-refdemoapigateway-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/fetch-cf',
-    cfPath: process.env.DEFAULT_CF_PATH ?? '/content/dam/ref-demo-eds/cta/sample',
+    cfPath:
+      process.env.DEFAULT_CF_PATH ?? '/content/dam/mandg/en/fragments/promotions/fragment-one',
     variation: process.env.DEFAULT_CF_VARIATION ?? 'master',
   };
 }
