@@ -7,7 +7,7 @@ import type { CtaResult, VariationOption } from '@/lib/cta';
 // variations, fetched live from AEM on every page load (so any variation you
 // author in AEM appears automatically — no code change needed). Each option is
 // labelled with the content fragment's title for that variation.
-const CF_PATH = '/content/dam/mandg/en/fragments/promotions/fragment-one';
+const CF_PATH = '/content/dam/mandg/en/fragments/promotions/cf-1';
 
 function PromoFragment({ result }: { result: CtaResult }) {
   const { fragment, ctaHref, imageUrl } = result;

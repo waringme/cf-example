@@ -58,7 +58,7 @@ const DEFAULTS = {
   wrapperServiceUrl:
     'https://3635370-refdemoapigateway-stage.adobeioruntime.net/api/v1/web/ref-demo-api-gateway/fetch-cf',
   directEndpoint: '/content/_cq_graphql/ref-demo-eds/endpoint.json',
-  cfPath: '/content/dam/mandg/en/fragments/promotions/fragment-one',
+  cfPath: '/content/dam/mandg/en/fragments/promotions/cf-1',
   variation: 'master',
 } as const;
 
