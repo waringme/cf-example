@@ -42,6 +42,8 @@ export default function MobileApp() {
   const [variations, setVariations] = useState<VariationOption[]>([
     { name: 'master', title: 'Master' },
   ]);
+  // True when the variation list came from the offline snapshot, not live AEM.
+  const [variationsMock, setVariationsMock] = useState(false);
   const [variation, setVariation] = useState<string>('master');
   const [result, setResult] = useState<CtaResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,11 +87,15 @@ export default function MobileApp() {
             ? data.variations
             : [{ name: 'master', title: 'Master' }];
         setVariations(list);
+        setVariationsMock(Boolean(data?.mock));
         setVariation((current) =>
           list.some((o) => o.name === current) ? current : list[0].name,
         );
       } catch {
-        if (!cancelled) setVariations([{ name: 'master', title: 'Master' }]);
+        if (!cancelled) {
+          setVariations([{ name: 'master', title: 'Master' }]);
+          setVariationsMock(true);
+        }
       }
     })();
     return () => {
@@ -120,7 +126,9 @@ export default function MobileApp() {
         <div className="variation-bar">
           <label htmlFor="variation">
             Content fragment variation
-            <span className="variation-count">{variations.length} in AEM</span>
+            <span className="variation-count">
+              {variations.length} in {variationsMock ? 'APP' : 'AEM'}
+            </span>
           </label>
           <select
             id="variation"

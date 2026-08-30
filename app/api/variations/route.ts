@@ -13,11 +13,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const variations = await fetchVariations(cfPath);
-    return NextResponse.json({ cfPath, variations });
+    const { variations, mock } = await fetchVariations(cfPath);
+    return NextResponse.json({ cfPath, variations, mock });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     // Degrade gracefully: master always exists, so the app still works.
-    return NextResponse.json({ cfPath, variations: ['master'], error: message }, { status: 200 });
+    return NextResponse.json(
+      { cfPath, variations: [{ name: 'master', title: 'Master' }], mock: true, error: message },
+      { status: 200 },
+    );
   }
 }

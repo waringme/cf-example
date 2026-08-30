@@ -122,8 +122,13 @@ export interface VariationOption {
  * gets the variation names + master's title; a second aliased query fetches the
  * title for each remaining variation. Returns options ordered master-first so
  * the caller can build a dropdown labelled by fragment title.
+ *
+ * `mock` is true when the list came from the offline snapshot (AEM unreachable)
+ * rather than live from AEM, so the UI can label the source honestly.
  */
-export async function fetchVariations(cfPath: string): Promise<VariationOption[]> {
+export async function fetchVariations(
+  cfPath: string,
+): Promise<{ variations: VariationOption[]; mock: boolean }> {
   const origin = envOr(process.env.AEM_PUBLISH_ORIGIN, DEFAULTS.aemPublishOrigin).replace(/\/$/, '');
   const directEndpoint = envOr(process.env.AEM_GRAPHQL_DIRECT_ENDPOINT, DEFAULTS.directEndpoint);
   // Cache-buster so the variation list also reflects the latest published state.
@@ -170,11 +175,11 @@ export async function fetchVariations(cfPath: string): Promise<VariationOption[]
       });
     }
 
-    return options;
+    return { variations: options, mock: false };
   } catch (error) {
     // AEM unreachable (hibernating / timeout). If we have an offline snapshot
     // for this fragment, serve its variation list so the dropdown still works.
-    if (hasMock(cfPath)) return mockVariations();
+    if (hasMock(cfPath)) return { variations: mockVariations(), mock: true };
     throw error;
   }
 }

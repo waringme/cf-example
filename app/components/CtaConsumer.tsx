@@ -12,6 +12,8 @@ export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
   const [variations, setVariations] = useState<VariationOption[]>([
     { name: defaults.variation, title: defaults.variation },
   ]);
+  // True when the variation list came from the offline snapshot, not live AEM.
+  const [variationsMock, setVariationsMock] = useState(false);
   const [variationsLoading, setVariationsLoading] = useState(false);
   const [result, setResult] = useState<CtaResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
             ? data.variations
             : [{ name: 'master', title: 'Master' }];
         setVariations(list);
+        setVariationsMock(Boolean(data?.mock));
         // Keep the current selection if still valid, else fall back to the first.
         setSource((prev) =>
           list.some((o) => o.name === prev.variation)
@@ -50,7 +53,10 @@ export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
             : { ...prev, variation: list[0].name },
         );
       } catch {
-        if (!cancelled) setVariations([{ name: 'master', title: 'Master' }]);
+        if (!cancelled) {
+          setVariations([{ name: 'master', title: 'Master' }]);
+          setVariationsMock(true);
+        }
       } finally {
         if (!cancelled) setVariationsLoading(false);
       }
@@ -106,7 +112,11 @@ export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
           <label>
             <span>
               Variation{' '}
-              <em>{variationsLoading ? '(loading…)' : `(${variations.length} in AEM)`}</em>
+              <em>
+                {variationsLoading
+                  ? '(loading…)'
+                  : `(${variations.length} in ${variationsMock ? 'APP' : 'AEM'})`}
+              </em>
             </span>
             <select
               value={source.variation}
