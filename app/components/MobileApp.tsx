@@ -161,6 +161,13 @@ export default function MobileApp() {
           <section className="feed">
             <h2 className="feed-title">Your financial insights</h2>
 
+            {/* Content fragment promo section */}
+            <div className="promo-section">
+              {loading && <div className="promo-skeleton" aria-label="Loading promotion" />}
+              {error && <p className="promo-error">Couldn&rsquo;t load promotion: {error}</p>}
+              {!loading && !error && result && <PromoFragment result={result} />}
+            </div>
+
             <article className="tip-card">
               <span className="tip-kicker">Retirement</span>
               <h3>You&rsquo;re on track for your 2045 goal</h3>
@@ -178,13 +185,6 @@ export default function MobileApp() {
                 returns tax-free.
               </p>
             </article>
-
-            {/* Content fragment promo section */}
-            <div className="promo-section">
-              {loading && <div className="promo-skeleton" aria-label="Loading promotion" />}
-              {error && <p className="promo-error">Couldn&rsquo;t load promotion: {error}</p>}
-              {!loading && !error && result && <PromoFragment result={result} />}
-            </div>
 
             <article className="tip-card">
               <span className="tip-kicker">Markets</span>
