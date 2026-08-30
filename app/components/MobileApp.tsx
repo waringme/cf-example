@@ -14,7 +14,10 @@ function PromoFragment({ result }: { result: CtaResult }) {
   // Stacked, mobile-friendly layout: text on top, image below.
   return (
     <div className="promo-card">
-      <span className="promo-tag">Sponsored · Content Fragment</span>
+      <span className="promo-tag">
+        Sponsored · Content Fragment
+        {result.mockReason === 'aem-unavailable' && ' · offline snapshot'}
+      </span>
       {fragment.subtitle && <p className="promo-eyebrow">{fragment.subtitle}</p>}
       {fragment.title && <h3 className="promo-title">{fragment.title}</h3>}
       {fragment.description?.plaintext && (

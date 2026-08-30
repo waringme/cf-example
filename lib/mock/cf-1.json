@@ -1,0 +1,64 @@
+{
+  "_comment": "Offline fallback snapshot of the cf-1 CTA content fragment, captured from AEM publish so the demo keeps working while AEM is hibernating. Banner image URLs point at local copies under /public/mock. The `master` variation and each authored variation mirror the GraphQL `data.ctaByPath.item` shape. Regenerate by refetching the CTAByPath persisted query per variation.",
+  "cfPath": "/content/dam/mandg/en/fragments/promotions/cf-1",
+  "variations": [
+    { "name": "master", "title": "Secure Future" },
+    { "name": "genai_future_preparation", "title": "Future Ready" },
+    { "name": "genai_smart_planning", "title": "Retire Smart" },
+    { "name": "genai_expert_guidance", "title": "Plan Ahead" }
+  ],
+  "items": {
+    "master": {
+      "__typename": "CtaModel",
+      "_path": "/content/dam/mandg/en/fragments/promotions/cf-1",
+      "_variation": "master",
+      "title": "Secure Future",
+      "subtitle": "Need Help?",
+      "description": {
+        "plaintext": "Navigate retirement with confidence. Expert advice tailored to your needs can make all the difference. Explore resources for a brighter future."
+      },
+      "bannerimage": { "_publishUrl": "/mock/50-5077.png" },
+      "ctalabel": "Explore Now",
+      "ctaurl": { "_path": "/content/wknd-universal" }
+    },
+    "genai_future_preparation": {
+      "__typename": "CtaModel",
+      "_path": "/content/dam/mandg/en/fragments/promotions/cf-1",
+      "_variation": "genai_future_preparation",
+      "title": "Future Ready",
+      "subtitle": "Seek Advice",
+      "description": {
+        "plaintext": "Prepare for retirement with confidence. Access personalized advice and resources to ensure a bright financial future."
+      },
+      "bannerimage": null,
+      "ctalabel": "Start Now",
+      "ctaurl": { "_path": "/content/wknd-universal" }
+    },
+    "genai_smart_planning": {
+      "__typename": "CtaModel",
+      "_path": "/content/dam/mandg/en/fragments/promotions/cf-1",
+      "_variation": "genai_smart_planning",
+      "title": "Retire Smart",
+      "subtitle": "Get Tips",
+      "description": {
+        "plaintext": "Confidently plan your retirement. Access expert advice and resources tailored to your needs for a secure tomorrow."
+      },
+      "bannerimage": { "_publishUrl": "/mock/square-146.png" },
+      "ctalabel": "Learn More",
+      "ctaurl": { "_path": "/content/wknd-universal" }
+    },
+    "genai_expert_guidance": {
+      "__typename": "CtaModel",
+      "_path": "/content/dam/mandg/en/fragments/promotions/cf-1",
+      "_variation": "genai_expert_guidance",
+      "title": "Plan Ahead",
+      "subtitle": "Expert Aid",
+      "description": {
+        "plaintext": "Discover how expert guidance can help you navigate retirement with ease. Explore resources for a secure financial path."
+      },
+      "bannerimage": { "_publishUrl": "/mock/16-9-aspect-ratio40.png" },
+      "ctalabel": "Discover",
+      "ctaurl": { "_path": "/content/wknd-universal" }
+    }
+  }
+}

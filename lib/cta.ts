@@ -34,6 +34,28 @@ export interface CtaSource {
   variation: string;
 }
 
+import { hasMock, mockFragmentFor, mockMaster, mockVariations } from './mock';
+
+/**
+ * AEMaaCS dev/stage environments hibernate when idle, so a live fetch can hang.
+ * Abort after this long and fall back to the repo's cf-1 snapshot.
+ */
+const AEM_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = AEM_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface CtaResult {
   fragment: CtaFragment;
   ctaHref: string;
@@ -41,6 +63,13 @@ export interface CtaResult {
   /** True when imageUrl was inherited from master because the variation had none. */
   imageFromMaster: boolean;
   mock: boolean;
+  /**
+   * Why mock data is being shown. `no-origin` = no AEM publish origin was
+   * configured. `aem-unavailable` = AEM was configured but unreachable (e.g.
+   * hibernating), so the repo's cf-1 snapshot was served instead. Absent on
+   * live results.
+   */
+  mockReason?: 'no-origin' | 'aem-unavailable';
   /** The exact request that was issued, for the "how it works" panel. */
   debug: {
     wrapperServiceUrl: string;
@@ -101,7 +130,7 @@ export async function fetchVariations(cfPath: string): Promise<VariationOption[]
   const url = `${origin}${directEndpoint}?cq=${Date.now()}`;
 
   const runQuery = async (query: string) => {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
@@ -113,34 +142,41 @@ export async function fetchVariations(cfPath: string): Promise<VariationOption[]
     return response.json();
   };
 
-  // Step 1: master's title + the list of authored variation names.
-  const base = await runQuery(
-    `{ ctaByPath(_path: ${JSON.stringify(cfPath)}) { item { _variations title } } }`,
-  );
-  const baseItem = base?.data?.ctaByPath?.item;
-  const names: string[] = baseItem?._variations ?? [];
-  const options: VariationOption[] = [
-    { name: 'master', title: baseItem?.title || 'Master' },
-  ];
+  try {
+    // Step 1: master's title + the list of authored variation names.
+    const base = await runQuery(
+      `{ ctaByPath(_path: ${JSON.stringify(cfPath)}) { item { _variations title } } }`,
+    );
+    const baseItem = base?.data?.ctaByPath?.item;
+    const names: string[] = baseItem?._variations ?? [];
+    const options: VariationOption[] = [
+      { name: 'master', title: baseItem?.title || 'Master' },
+    ];
 
-  // Step 2: fetch each variation's title in a single aliased query.
-  if (names.length) {
-    const aliases = names
-      .map(
-        (n, i) =>
-          `v${i}: ctaByPath(_path: ${JSON.stringify(cfPath)}, variation: ${JSON.stringify(
-            n,
-          )}) { item { title } }`,
-      )
-      .join('\n');
-    const titles = await runQuery(`{ ${aliases} }`);
-    names.forEach((name, i) => {
-      const title = titles?.data?.[`v${i}`]?.item?.title;
-      options.push({ name, title: title || prettify(name) });
-    });
+    // Step 2: fetch each variation's title in a single aliased query.
+    if (names.length) {
+      const aliases = names
+        .map(
+          (n, i) =>
+            `v${i}: ctaByPath(_path: ${JSON.stringify(cfPath)}, variation: ${JSON.stringify(
+              n,
+            )}) { item { title } }`,
+        )
+        .join('\n');
+      const titles = await runQuery(`{ ${aliases} }`);
+      names.forEach((name, i) => {
+        const title = titles?.data?.[`v${i}`]?.item?.title;
+        options.push({ name, title: title || prettify(name) });
+      });
+    }
+
+    return options;
+  } catch (error) {
+    // AEM unreachable (hibernating / timeout). If we have an offline snapshot
+    // for this fragment, serve its variation list so the dropdown still works.
+    if (hasMock(cfPath)) return mockVariations();
+    throw error;
   }
-
-  return options;
 }
 
 /** Turn a variation name into a readable label when no title is available. */
@@ -178,6 +214,43 @@ function mockFragment(): CtaFragment {
   };
 }
 
+/**
+ * Build a CtaResult from the repo's offline cf-1 snapshot, or null if there's
+ * no snapshot for this path/variation. Mirrors the live master-image
+ * inheritance so a variation without its own banner still shows master's.
+ */
+function buildMockResult(
+  cfPath: string,
+  variation: string,
+  publishOrigin: string,
+  debug: CtaResult['debug'],
+  reason: NonNullable<CtaResult['mockReason']>,
+): CtaResult | null {
+  if (!hasMock(cfPath)) return null;
+  const fragment = mockFragmentFor(variation);
+  if (!fragment) return null;
+
+  let imageUrl = fragment.bannerimage?._publishUrl ?? null;
+  let imageFromMaster = false;
+  if (!imageUrl && variation !== 'master') {
+    const masterImage = mockMaster().bannerimage?._publishUrl;
+    if (masterImage) {
+      imageUrl = masterImage;
+      imageFromMaster = true;
+    }
+  }
+
+  return {
+    fragment,
+    ctaHref: resolveCtaHref(fragment, publishOrigin),
+    imageUrl,
+    imageFromMaster,
+    mock: true,
+    mockReason: reason,
+    debug,
+  };
+}
+
 export async function fetchCta(source: CtaSource): Promise<CtaResult> {
   const {
     aemPublishOrigin,
@@ -203,9 +276,11 @@ export async function fetchCta(source: CtaSource): Promise<CtaResult> {
 
   const debug = { wrapperServiceUrl, requestBody, resolvedGraphqlUrl };
 
-  // No publish origin configured -> render a sample fragment so the pattern is
-  // visible without needing live AEM credentials.
+  // No publish origin configured -> serve the cf-1 snapshot (or a generic
+  // sample for other paths) so the pattern is visible without live AEM.
   if (!publishOrigin) {
+    const mock = buildMockResult(cfPath, variation, publishOrigin, debug, 'no-origin');
+    if (mock) return mock;
     const fragment = mockFragment();
     return {
       fragment,
@@ -213,25 +288,38 @@ export async function fetchCta(source: CtaSource): Promise<CtaResult> {
       imageUrl: fragment.bannerimage?._publishUrl ?? null,
       imageFromMaster: false,
       mock: true,
+      mockReason: 'no-origin',
       debug,
     };
   }
 
-  const response = await fetch(wrapperServiceUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody),
-    // Always fetch fresh — CTA content can change on the fly.
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Wrapper service returned ${response.status} ${response.statusText}`);
+  // Try AEM. If it's unreachable (hibernating / timeout / 5xx) and we have an
+  // offline snapshot for this fragment, serve that instead of erroring.
+  let fragment: CtaFragment | undefined;
+  try {
+    const response = await fetchWithTimeout(wrapperServiceUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+      // Always fetch fresh — CTA content can change on the fly.
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      throw new Error(`Wrapper service returned ${response.status} ${response.statusText}`);
+    }
+    const payload = await response.json();
+    fragment = payload?.data?.ctaByPath?.item;
+  } catch (error) {
+    const mock = buildMockResult(cfPath, variation, publishOrigin, debug, 'aem-unavailable');
+    if (mock) return mock;
+    throw error;
   }
 
-  const payload = await response.json();
-  const fragment: CtaFragment | undefined = payload?.data?.ctaByPath?.item;
   if (!fragment) {
+    // AEM answered but this path/variation has no item. Fall back to the
+    // snapshot if we have one; otherwise surface the miss.
+    const mock = buildMockResult(cfPath, variation, publishOrigin, debug, 'aem-unavailable');
+    if (mock) return mock;
     throw new Error(
       'No CTA fragment found at that path. Check the content fragment path and variation.',
     );
@@ -245,7 +333,7 @@ export async function fetchCta(source: CtaSource): Promise<CtaResult> {
   // the promo still shows one — mirroring how CF variations inherit from master.
   if (!imageUrl && variation !== 'master') {
     try {
-      const masterRes = await fetch(wrapperServiceUrl, {
+      const masterRes = await fetchWithTimeout(wrapperServiceUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ graphQLPath, cfPath, variation: `master?cq=${Date.now()}` }),

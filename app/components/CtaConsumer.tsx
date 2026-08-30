@@ -142,7 +142,14 @@ export default function CtaConsumer({ defaults }: { defaults: CtaSource }) {
 
       {result && (
         <>
-          {result.mock && (
+          {result.mock && result.mockReason === 'aem-unavailable' && (
+            <p className="notice">
+              AEM is <strong>unreachable</strong> (likely hibernating) — showing the repo&rsquo;s
+              offline <code>cf-1</code> snapshot so the demo keeps working. It will fetch live again
+              once AEM is back up.
+            </p>
+          )}
+          {result.mock && result.mockReason !== 'aem-unavailable' && (
             <p className="notice">
               Showing <strong>mock data</strong> — set an AEM publish origin above (or
               <code>AEM_PUBLISH_ORIGIN</code> in <code>.env.local</code>) to fetch a live fragment.
